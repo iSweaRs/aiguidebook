@@ -1,0 +1,69 @@
+'use server';
+import connectDB from '../lib/db/mongodb';
+import mongoose from 'mongoose';
+import { Conversation, Course, ConversationCategory } from '../lib/db/models';
+
+
+export type GroupedConversations = {
+  academic: {
+    course: { _id: string; name: string; code: string };
+    conversations: Array<{ _id: string; title: string; updatedAt: Date }>;
+  }[];
+  private: Array<{ _id: string; title: string; updatedAt: Date }>;
+};
+
+/**
+ * REQ-01: Fetches conversations grouped by Private / Academic (and Sub-Courses).
+ * Sorts all channels chronologically by `updatedAt` DESC.
+ */
+export async function getDashboardConversations(userId: string): Promise<GroupedConversations> {
+  await connectDB();
+
+  // 1. Fetch Private Conversations (Sorted chronologically)
+  const privateConvos = await Conversation.find({
+    userId,
+    category: ConversationCategory.PRIVATE,
+  })
+    .sort({ updatedAt: -1 })
+    .select('_id title updatedAt')
+    .lean();
+
+  // 2. Fetch Academic Conversations with Populated Course details (Sorted chronologically)
+  const academicConvos = await Conversation.find({
+    userId,
+    category: ConversationCategory.ACADEMIC,
+  })
+    .sort({ updatedAt: -1 })
+    .populate('courseId', '_id name code')
+    .select('_id title updatedAt courseId')
+    .lean();
+
+  // 3. Group Academic Conversations by Course
+  const courseMap = new Map<string, any>();
+  
+  for (const convo of academicConvos) {
+    const course = convo.courseId as any;
+    if (!course) continue;
+
+    if (!courseMap.has(course._id.toString())) {
+      courseMap.set(course._id.toString(), {
+        course: { _id: course._id.toString(), name: course.name, code: course.code },
+        conversations: [],
+      });
+    }
+    courseMap.get(course._id.toString()).conversations.push({
+      _id: convo._id.toString(),
+      title: convo.title,
+      updatedAt: convo.updatedAt,
+    });
+  }
+
+  return {
+    academic: Array.from(courseMap.values()),
+    private: privateConvos.map((c: any) => ({
+      _id: c._id.toString(),
+      title: c.title,
+      updatedAt: c.updatedAt,
+    })),
+  };
+}
