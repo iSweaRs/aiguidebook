@@ -2,22 +2,34 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { sendChatMessage, uploadDocument } from '../dashboard/actions';
-import { Plus } from 'lucide-react';
+import { sendChatMessage, uploadDocument, sendBrainstormMessage } from '../dashboard/actions';
+import { Plus, Lightbulb, LightbulbOff } from 'lucide-react';
 
-export default function ChatInput({ conversationId }: { conversationId: string }) {
+interface ChatInputProps {
+  conversationId: string;
+  isBrainstorming?: boolean;
+  onToggleBrainstorm?: () => void;
+}
+
+export default function ChatInput({ conversationId, isBrainstorming = false, onToggleBrainstorm }: ChatInputProps) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isLoading) return;
 
     setIsLoading(true);
     try {
-      await sendChatMessage(conversationId, content, 'user');
+      if (isBrainstorming) {
+        // Trigger brainstorming flow (saves to chat AND brainstorm log)
+        await sendBrainstormMessage(conversationId, content);
+      } else {
+        // Normal chat flow
+        await sendChatMessage(conversationId, content, 'user');
+      }
       setContent('');
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -28,7 +40,7 @@ export default function ChatInput({ conversationId }: { conversationId: string }
 
   const handleConfirmUpload = () => {
     setShowWarning(false);
-    fileInputRef.current?.click(); // Triggers the hidden file selector
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,13 +56,12 @@ export default function ChatInput({ conversationId }: { conversationId: string }
       console.error("Failed to upload document:", error);
     } finally {
       setIsLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset the input
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   return (
     <div className="relative">
-      {/* Warning Modal */}
       {showWarning && (
         <div className="absolute bottom-full mb-2 left-0 right-0 bg-yellow-50 border border-yellow-200 p-4 rounded-md shadow-lg z-10 mx-4">
           <p className="text-yellow-800 text-sm font-medium mb-3">
@@ -74,7 +85,6 @@ export default function ChatInput({ conversationId }: { conversationId: string }
       )}
 
       <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2 bg-white items-center relative">
-        {/* Hidden File Input */}
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -83,7 +93,6 @@ export default function ChatInput({ conversationId }: { conversationId: string }
           accept=".pdf,.doc,.docx,.txt"
         />
 
-        {/* Plus Button */}
         <button
           type="button"
           onClick={() => setShowWarning(true)}
@@ -98,10 +107,25 @@ export default function ChatInput({ conversationId }: { conversationId: string }
           type="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Type your message..."
+          placeholder={isBrainstorming ? "Brainstorm your ideas..." : "Type your message..."}
           className="flex-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
           disabled={isLoading}
         />
+
+        {/* New Brainstorm Mode Toggle Button */}
+        <button
+          type="button"
+          onClick={onToggleBrainstorm}
+          className={`p-2 rounded-md flex-shrink-0 transition-colors ${
+            isBrainstorming 
+              ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' 
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+          title={isBrainstorming ? "Switch to Normal Mode" : "Switch to Brainstorming Mode"}
+        >
+          {isBrainstorming ? <Lightbulb size={20} /> : <LightbulbOff size={20} />}
+        </button>
+
         <button
           type="submit"
           disabled={isLoading}

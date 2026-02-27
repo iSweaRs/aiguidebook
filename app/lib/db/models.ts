@@ -50,6 +50,13 @@ export interface IDocumentFile extends Document {
   uploadedAt: Date;
 }
 
+export interface IBrainstormIdea extends Document {
+  conversationId: mongoose.Types.ObjectId | IConversation;
+  prompt: string;
+  idea: string;
+  createdAt: Date;
+}
+
 // --- Schemas ---
 const UserSchema: Schema = new Schema(
   {
@@ -100,9 +107,17 @@ const DocumentFileSchema: Schema = new Schema({
   uploadedAt: { type: Date, default: Date.now },
 });
 
+const BrainstormIdeaSchema: Schema = new Schema({
+  conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation', required: true },
+  prompt: { type: String, required: true },
+  idea: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
 // --- Models ---
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Course: Model<ICourse> = mongoose.models.Course || mongoose.model<ICourse>('Course', CourseSchema);
 export const Conversation: Model<IConversation> = mongoose.models.Conversation || mongoose.model<IConversation>('Conversation', ConversationSchema);
 export const Message: Model<IMessage> = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);
 export const DocumentFile: Model<IDocumentFile> = mongoose.models.DocumentFile || mongoose.model<IDocumentFile>('DocumentFile', DocumentFileSchema);
+export const BrainstormIdea: Model<IBrainstormIdea> = mongoose.models.BrainstormIdea || mongoose.model<IBrainstormIdea>('BrainstormIdea', BrainstormIdeaSchema);

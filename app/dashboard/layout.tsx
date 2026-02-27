@@ -2,7 +2,7 @@ import React from 'react';
 import Sidebar from '../components/sidebar';
 
 // In a real implementation, you would extract this from NextAuth or your Session mechanism.
-const MOCK_USER_ID = '69a1606e13ef3ebe4b3f1521'; 
+const MOCK_USER_ID = '69a1a812cdefc20b0418be58'; 
 
 export default function DashboardLayout({
   children,

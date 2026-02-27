@@ -1,22 +1,21 @@
 // app/dashboard/chat/[id]/page.tsx
 import ChatMessages from '../../../components/ChatMessages';
-import { getConversationMessages } from '../../actions';
-import ChatInput from '../../../components/ChatInput'; // Import the new component
+import { getConversationMessages, getBrainstormIdeas } from '../../actions';
+import ChatInput from '../../../components/ChatInput'; 
+import ChatWrapper from '../../../components/ChatWrapper';
 
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const messages = await getConversationMessages(id); //
+  
+  // Fetch both messages and brainstorm ideas concurrently
+  const [messages, ideas] = await Promise.all([
+    getConversationMessages(id),
+    getBrainstormIdeas(id)
+  ]);
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="p-4 border-b bg-gray-50">
-        <h1 className="font-semibold text-gray-700">Chat History</h1>
-      </div>
-
-      <ChatMessages messages={messages} />
-
-      {/* Replaced the placeholder with the actual Input component */}
-      <ChatInput conversationId={id} />
+      <ChatWrapper conversationId={id} messages={messages} ideas={ideas} />
     </div>
   );
 }

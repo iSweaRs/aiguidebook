@@ -1,8 +1,8 @@
 'use server';
 import connectDB from '../lib/db/mongodb';
 import mongoose from 'mongoose';
-import { Conversation, Course, ConversationCategory, DocumentFile } from '../lib/db/models';
-
+import { Conversation, Course, ConversationCategory, DocumentFile, Message, BrainstormIdea } from '../lib/db/models';
+import { revalidatePath } from 'next/cache';
 
 export type GroupedConversations = {
   academic: {
@@ -76,8 +76,6 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
   };
 }
 
-import { Message } from '../lib/db/models';
-
 export async function getConversationMessages(conversationId: string) {
   await connectDB();  
   const messages = await Message.find({ conversationId })
@@ -90,10 +88,6 @@ export async function getConversationMessages(conversationId: string) {
     createdAt: m.createdAt.toISOString(),
   }));
 }
-
-// app/dashboard/actions.ts
-import { revalidatePath } from 'next/cache'; //
-// ... existing imports
 
 export async function sendChatMessage(conversationId: string, content: string, role: string) {
   await connectDB(); //
@@ -119,7 +113,7 @@ export async function sendChatMessage(conversationId: string, content: string, r
   };
 }
 
-import { redirect } from 'next/navigation';
+
 
 export async function createConversation(userId: string, category: string, courseId?: string) {
   await connectDB();
@@ -219,6 +213,52 @@ export async function uploadDocument(conversationId: string, formData: FormData)
   });
 
   // Update the conversation's updatedAt timestamp and refresh the page
+  await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+  revalidatePath(`/dashboard/chat/${conversationId}`);
+}
+
+export async function getBrainstormIdeas(conversationId: string) {
+  await connectDB();
+  const ideas = await BrainstormIdea.find({ conversationId })
+    .sort({ createdAt: 1 })
+    .lean();
+    
+  return ideas.map((i: any) => ({
+    id: i._id.toString(),
+    prompt: i.prompt,
+    idea: i.idea,
+    createdAt: i.createdAt.toISOString(),
+  }));
+}
+
+export async function sendBrainstormMessage(conversationId: string, prompt: string) {
+  await connectDB();
+  
+  // 1. Save the user's prompt as a normal message
+  await Message.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    role: 'user',
+    content: prompt,
+  });
+
+  // 2. Generate the AI idea (Mocking the AI response here)
+  const generatedIdea = `Here is a brainstormed idea for: "${prompt}"...`;
+  
+  // 3. Save the AI's response to the chat
+  await Message.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    role: 'assistant',
+    content: generatedIdea,
+  });
+
+  // 4. Log the Prompt -> Idea tuple to the Brainstorm database
+  await BrainstormIdea.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    prompt: prompt,
+    idea: generatedIdea,
+  });
+
+  // 5. Update the conversation timestamp and refresh UI
   await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
   revalidatePath(`/dashboard/chat/${conversationId}`);
 }
