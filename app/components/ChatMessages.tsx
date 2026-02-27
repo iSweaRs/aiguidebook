@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ChatMessages({ messages }: { messages: any[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // Scroll to bottom whenever messages change

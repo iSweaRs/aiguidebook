@@ -84,3 +84,31 @@ export async function getConversationMessages(conversationId: string) {
     createdAt: m.createdAt.toISOString(),
   }));
 }
+
+// app/dashboard/actions.ts
+import { revalidatePath } from 'next/cache'; //
+// ... existing imports
+
+export async function sendChatMessage(conversationId: string, content: string, role: string) {
+  await connectDB(); //
+
+  // 1. Create the new message
+  const newMessage = await Message.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    role,
+    content,
+  });
+
+  // 2. Update the conversation's updatedAt timestamp for sorting
+  await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+
+  // 3. Refresh the page data
+  revalidatePath(`/dashboard/chat/${conversationId}`);
+
+  return {
+    _id: newMessage._id.toString(),
+    role: newMessage.role,
+    content: newMessage.content,
+    createdAt: newMessage.createdAt.toISOString(),
+  };
+}
