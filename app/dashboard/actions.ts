@@ -18,7 +18,7 @@ export type GroupedConversations = {
  */
 export async function getDashboardConversations(userId: string): Promise<GroupedConversations> {
   await connectDB();
-
+  console.log(`[DB DEBUG] Fetching conversations for User ID: ${userId}`); 
   // 1. Fetch Private Conversations (Sorted chronologically)
   const privateConvos = await Conversation.find({
     userId,
@@ -28,6 +28,7 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
     .select('_id title updatedAt')
     .lean();
 
+    console.log(`[DB DEBUG] Found ${privateConvos.length} private conversations.`); //
   // 2. Fetch Academic Conversations with Populated Course details (Sorted chronologically)
   const academicConvos = await Conversation.find({
     userId,
@@ -38,6 +39,7 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
     .select('_id title updatedAt courseId')
     .lean();
 
+    console.log(`[DB DEBUG] Found ${academicConvos.length} academic conversations.`);
   // 3. Group Academic Conversations by Course
   const courseMap = new Map<string, any>();
   
@@ -54,16 +56,16 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
     courseMap.get(course._id.toString()).conversations.push({
       _id: convo._id.toString(),
       title: convo.title,
-      updatedAt: convo.updatedAt,
+      updatedAt: convo.updatedAt?.toISOString(),
     });
   }
-
+  
   return {
     academic: Array.from(courseMap.values()),
     private: privateConvos.map((c: any) => ({
       _id: c._id.toString(),
       title: c.title,
-      updatedAt: c.updatedAt,
+      updatedAt: c.updatedAt.toISOString(),
     })),
   };
 }
