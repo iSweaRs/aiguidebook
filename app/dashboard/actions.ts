@@ -1,7 +1,7 @@
 'use server';
 import connectDB from '../lib/db/mongodb';
 import mongoose from 'mongoose';
-import { Conversation, Course, ConversationCategory } from '../lib/db/models';
+import { Conversation, Course, ConversationCategory, DocumentFile } from '../lib/db/models';
 
 
 export type GroupedConversations = {
@@ -192,4 +192,33 @@ export async function deleteCourse(courseId: string) {
   await Course.findByIdAndDelete(courseId);
 
   revalidatePath('/dashboard');
+}
+
+export async function uploadDocument(conversationId: string, formData: FormData) {
+  await connectDB();
+  
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file uploaded');
+
+  // Convert the uploaded file into a binary Buffer
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Save the document directly into MongoDB
+  await DocumentFile.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    filename: file.name,
+    contentType: file.type,
+    data: buffer,
+  });
+
+  // Create a message in the chat indicating the user uploaded a file
+  await Message.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    role: 'user',
+    content: `📎 Uploaded document: ${file.name}`,
+  });
+
+  // Update the conversation's updatedAt timestamp and refresh the page
+  await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+  revalidatePath(`/dashboard/chat/${conversationId}`);
 }
