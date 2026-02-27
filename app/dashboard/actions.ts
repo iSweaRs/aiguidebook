@@ -69,3 +69,46 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
     })),
   };
 }
+
+import { Message } from '../lib/db/models';
+
+export async function getConversationMessages(conversationId: string) {
+  await connectDB();  
+  const messages = await Message.find({ conversationId })
+    .sort({ createdAt: 1 })
+    .lean();
+  return messages.map((m: any) => ({
+    _id: m._id.toString(),
+    role: m.role,
+    content: m.content,
+    createdAt: m.createdAt.toISOString(),
+  }));
+}
+
+// app/dashboard/actions.ts
+import { revalidatePath } from 'next/cache'; //
+// ... existing imports
+
+export async function sendChatMessage(conversationId: string, content: string, role: string) {
+  await connectDB(); //
+
+  // 1. Create the new message
+  const newMessage = await Message.create({
+    conversationId: new mongoose.Types.ObjectId(conversationId),
+    role,
+    content,
+  });
+
+  // 2. Update the conversation's updatedAt timestamp for sorting
+  await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
+
+  // 3. Refresh the page data
+  revalidatePath(`/dashboard/chat/${conversationId}`);
+
+  return {
+    _id: newMessage._id.toString(),
+    role: newMessage.role,
+    content: newMessage.content,
+    createdAt: newMessage.createdAt.toISOString(),
+  };
+}
