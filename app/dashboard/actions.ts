@@ -112,4 +112,3 @@ export async function sendChatMessage(conversationId: string, content: string, r
     createdAt: newMessage.createdAt.toISOString(),
   };
 }
-test
