@@ -57,6 +57,12 @@ export interface IBrainstormIdea extends Document {
   createdAt: Date;
 }
 
+export interface IBiasReport extends Document {
+  messageId: mongoose.Types.ObjectId | IMessage;
+  reason: string;
+  createdAt: Date;
+}
+
 // --- Schemas ---
 const UserSchema: Schema = new Schema(
   {
@@ -114,6 +120,12 @@ const BrainstormIdeaSchema: Schema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const BiasReportSchema: Schema = new Schema({
+  messageId: { type: Schema.Types.ObjectId, ref: 'Message', required: true },
+  reason: { type: String, default: 'Flagged by user for bias or inappropriate content' },
+  createdAt: { type: Date, default: Date.now },
+});
+
 // --- Models ---
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Course: Model<ICourse> = mongoose.models.Course || mongoose.model<ICourse>('Course', CourseSchema);
@@ -121,3 +133,4 @@ export const Conversation: Model<IConversation> = mongoose.models.Conversation |
 export const Message: Model<IMessage> = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);
 export const DocumentFile: Model<IDocumentFile> = mongoose.models.DocumentFile || mongoose.model<IDocumentFile>('DocumentFile', DocumentFileSchema);
 export const BrainstormIdea: Model<IBrainstormIdea> = mongoose.models.BrainstormIdea || mongoose.model<IBrainstormIdea>('BrainstormIdea', BrainstormIdeaSchema);
+export const BiasReport: Model<IBiasReport> = mongoose.models.BiasReport || mongoose.model<IBiasReport>('BiasReport', BiasReportSchema);

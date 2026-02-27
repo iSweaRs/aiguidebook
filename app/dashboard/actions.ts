@@ -1,7 +1,7 @@
 'use server';
 import connectDB from '../lib/db/mongodb';
 import mongoose from 'mongoose';
-import { Conversation, Course, ConversationCategory, DocumentFile, Message, BrainstormIdea } from '../lib/db/models';
+import { Conversation, Course, ConversationCategory, DocumentFile, Message, BrainstormIdea, BiasReport } from '../lib/db/models';
 import { revalidatePath } from 'next/cache';
 
 export type GroupedConversations = {
@@ -81,11 +81,21 @@ export async function getConversationMessages(conversationId: string) {
   const messages = await Message.find({ conversationId })
     .sort({ createdAt: 1 })
     .lean();
+
+  // Find all reports associated with the messages in this conversation
+  const messageIds = messages.map(m => m._id);
+  const reports = await BiasReport.find({ messageId: { $in: messageIds } }).lean();
+  
+  // Create a fast-lookup Set of flagged message IDs
+  const flaggedMessageIds = new Set(reports.map(r => r.messageId.toString()));
+
   return messages.map((m: any) => ({
     _id: m._id.toString(),
     role: m.role,
     content: m.content,
     createdAt: m.createdAt.toISOString(),
+    // Attach the permanent flag status from the database
+    isFlagged: flaggedMessageIds.has(m._id.toString()), 
   }));
 }
 
@@ -261,4 +271,25 @@ export async function sendBrainstormMessage(conversationId: string, prompt: stri
   // 5. Update the conversation timestamp and refresh UI
   await Conversation.findByIdAndUpdate(conversationId, { updatedAt: new Date() });
   revalidatePath(`/dashboard/chat/${conversationId}`);
+}
+
+export async function reportMessageBias(messageId: string) {
+  await connectDB();
+  
+  await BiasReport.create({
+    messageId: new mongoose.Types.ObjectId(messageId),
+  });
+
+  return { success: true };
+}
+
+export async function removeMessageBiasReport(messageId: string) {
+  await connectDB();
+  
+  // Find and delete the report associated with this message
+  await BiasReport.deleteMany({
+    messageId: new mongoose.Types.ObjectId(messageId),
+  });
+
+  return { success: true };
 }
