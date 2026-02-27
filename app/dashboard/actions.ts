@@ -166,3 +166,30 @@ export async function createCourse(userId: string, name: string, code: string) {
   revalidatePath('/dashboard');
   return { _id: newCourse._id.toString() };
 }
+
+export async function deleteConversation(conversationId: string) {
+  await connectDB();
+  // 1. Delete all messages in the conversation
+  await Message.deleteMany({ conversationId: new mongoose.Types.ObjectId(conversationId) });
+  // 2. Delete the conversation itself
+  await Conversation.findByIdAndDelete(conversationId);
+  
+  revalidatePath('/dashboard');
+}
+
+export async function deleteCourse(courseId: string) {
+  await connectDB();
+  const convos = await Conversation.find({ courseId: new mongoose.Types.ObjectId(courseId) });
+  
+  // Delete messages for each conversation in this course
+  for (const convo of convos) {
+    await Message.deleteMany({ conversationId: convo._id });
+  }
+  
+  // Delete all conversations linked to this course
+  await Conversation.deleteMany({ courseId: new mongoose.Types.ObjectId(courseId) });
+  // Finally delete the course
+  await Course.findByIdAndDelete(courseId);
+
+  revalidatePath('/dashboard');
+}
