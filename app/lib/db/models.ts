@@ -42,6 +42,14 @@ export interface IMessage extends Document {
   createdAt: Date;
 }
 
+export interface IDocumentFile extends Document {
+  conversationId: mongoose.Types.ObjectId | IConversation;
+  filename: string;
+  contentType: string;
+  data: Buffer;
+  uploadedAt: Date;
+}
+
 // --- Schemas ---
 const UserSchema: Schema = new Schema(
   {
@@ -84,8 +92,17 @@ const MessageSchema: Schema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const DocumentFileSchema: Schema = new Schema({
+  conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation', required: true },
+  filename: { type: String, required: true },
+  contentType: { type: String, required: true },
+  data: { type: Buffer, required: true }, // Stores the file securely in the DB
+  uploadedAt: { type: Date, default: Date.now },
+});
+
 // --- Models ---
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Course: Model<ICourse> = mongoose.models.Course || mongoose.model<ICourse>('Course', CourseSchema);
 export const Conversation: Model<IConversation> = mongoose.models.Conversation || mongoose.model<IConversation>('Conversation', ConversationSchema);
 export const Message: Model<IMessage> = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);
+export const DocumentFile: Model<IDocumentFile> = mongoose.models.DocumentFile || mongoose.model<IDocumentFile>('DocumentFile', DocumentFileSchema);

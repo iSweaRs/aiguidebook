@@ -11,9 +11,13 @@
     "seed": "tsx --env-file=.env.local app/scripts/seed.ts"
   },
   "dependencies": {
-    "lucide-react": "0.575.0",
+    "@ai-sdk/google": "^3.0.33",
+    "@ai-sdk/react": "^3.0.105",
+    "ai": "^6.0.103",
+    "lucide-react": "^0.575.0",
     "mongoose": "^9.2.2",
     "next": "16.1.6",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
