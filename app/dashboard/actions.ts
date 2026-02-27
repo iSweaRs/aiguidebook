@@ -69,3 +69,18 @@ export async function getDashboardConversations(userId: string): Promise<Grouped
     })),
   };
 }
+
+import { Message } from '../lib/db/models';
+
+export async function getConversationMessages(conversationId: string) {
+  await connectDB();  
+  const messages = await Message.find({ conversationId })
+    .sort({ createdAt: 1 })
+    .lean();
+  return messages.map((m: any) => ({
+    _id: m._id.toString(),
+    role: m.role,
+    content: m.content,
+    createdAt: m.createdAt.toISOString(),
+  }));
+}
