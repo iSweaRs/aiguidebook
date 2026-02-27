@@ -1,7 +1,7 @@
 'use server';
 import connectDB from '../lib/db/mongodb';
 import mongoose from 'mongoose';
-import { Conversation, Course, ConversationCategory, DocumentFile, Message, BrainstormIdea, BiasReport } from '../lib/db/models';
+import { Conversation, Course, ConversationCategory, DocumentFile, Message, BrainstormIdea, BiasReport, Feedback } from '../lib/db/models';
 import { revalidatePath } from 'next/cache';
 
 export type GroupedConversations = {
@@ -293,3 +293,31 @@ export async function removeMessageBiasReport(messageId: string) {
 
   return { success: true };
 }
+
+export async function submitUserFeedback(userId: string, content: string, rating: number) {
+  await connectDB();
+  
+  await Feedback.create({
+    userId: new mongoose.Types.ObjectId(userId),
+    content,
+    rating,
+  });
+
+  return { success: true };
+}
+
+export async function getUserFeedback(userId: string) {
+  await connectDB();
+  
+  const feedbacks = await Feedback.find({ userId: new mongoose.Types.ObjectId(userId) })
+    .sort({ createdAt: -1 }) // Newest first
+    .lean();
+    
+  return feedbacks.map((f: any) => ({
+    id: f._id.toString(),
+    content: f.content,
+    rating: f.rating,
+    createdAt: f.createdAt.toISOString(),
+  }));
+}
+

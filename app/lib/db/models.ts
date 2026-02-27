@@ -63,6 +63,13 @@ export interface IBiasReport extends Document {
   createdAt: Date;
 }
 
+export interface IFeedback extends Document {
+  userId: mongoose.Types.ObjectId | IUser;
+  content: string;
+  rating: number; // 1-5 star rating for satisfaction
+  createdAt: Date;
+}
+
 // --- Schemas ---
 const UserSchema: Schema = new Schema(
   {
@@ -126,6 +133,14 @@ const BiasReportSchema: Schema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const FeedbackSchema: Schema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  content: { type: String, required: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  createdAt: { type: Date, default: Date.now },
+});
+
+
 // --- Models ---
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Course: Model<ICourse> = mongoose.models.Course || mongoose.model<ICourse>('Course', CourseSchema);
@@ -134,3 +149,4 @@ export const Message: Model<IMessage> = mongoose.models.Message || mongoose.mode
 export const DocumentFile: Model<IDocumentFile> = mongoose.models.DocumentFile || mongoose.model<IDocumentFile>('DocumentFile', DocumentFileSchema);
 export const BrainstormIdea: Model<IBrainstormIdea> = mongoose.models.BrainstormIdea || mongoose.model<IBrainstormIdea>('BrainstormIdea', BrainstormIdeaSchema);
 export const BiasReport: Model<IBiasReport> = mongoose.models.BiasReport || mongoose.model<IBiasReport>('BiasReport', BiasReportSchema);
+export const Feedback: Model<IFeedback> = mongoose.models.Feedback || mongoose.model<IFeedback>('Feedback', FeedbackSchema);
