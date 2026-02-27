@@ -83,7 +83,14 @@ export default function Sidebar({ userId }: { userId: string }) {
     <aside className="w-72 bg-gray-50 border-r h-screen flex flex-col relative">
       {/* Header */}
       <div className="p-4 border-b bg-white">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">AI Guidebook</h2>
+        
+        {/* Updated Title: Now acts as a Home button */}
+        <Link 
+          href="/dashboard" 
+          className="block text-xl font-bold text-gray-800 mb-4 hover:text-blue-600 transition-colors"
+        >
+          AI Guidebook
+        </Link>
         
         {!showTypeSelector ? (
           <button onClick={() => setShowTypeSelector(true)} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors font-medium">
