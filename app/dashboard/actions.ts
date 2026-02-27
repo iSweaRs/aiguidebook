@@ -16,48 +16,54 @@ export type GroupedConversations = {
  * REQ-01: Fetches conversations grouped by Private / Academic (and Sub-Courses).
  * Sorts all channels chronologically by `updatedAt` DESC.
  */
+// app/dashboard/actions.ts
+
 export async function getDashboardConversations(userId: string): Promise<GroupedConversations> {
   await connectDB();
-  console.log(`[DB DEBUG] Fetching conversations for User ID: ${userId}`); 
-  // 1. Fetch Private Conversations (Sorted chronologically)
+
+  // 1. Récupérer TOUS les cours de l'utilisateur (même sans chat)
+  const allCourses = await Course.find({ userId }).lean();
+
+  // 2. Récupérer les conversations privées
   const privateConvos = await Conversation.find({
     userId,
     category: ConversationCategory.PRIVATE,
   })
     .sort({ updatedAt: -1 })
-    .select('_id title updatedAt')
     .lean();
 
-    console.log(`[DB DEBUG] Found ${privateConvos.length} private conversations.`); //
-  // 2. Fetch Academic Conversations with Populated Course details (Sorted chronologically)
+  // 3. Récupérer les conversations académiques
   const academicConvos = await Conversation.find({
     userId,
     category: ConversationCategory.ACADEMIC,
   })
     .sort({ updatedAt: -1 })
-    .populate('courseId', '_id name code')
-    .select('_id title updatedAt courseId')
     .lean();
 
-    console.log(`[DB DEBUG] Found ${academicConvos.length} academic conversations.`);
-  // 3. Group Academic Conversations by Course
+  // 4. Initialiser la map avec tous les cours existants
   const courseMap = new Map<string, any>();
   
-  for (const convo of academicConvos) {
-    const course = convo.courseId as any;
-    if (!course) continue;
+  for (const course of allCourses) {
+    courseMap.set(course._id.toString(), {
+      course: { 
+        _id: course._id.toString(), 
+        name: course.name, 
+        code: course.code 
+      },
+      conversations: [],
+    });
+  }
 
-    if (!courseMap.has(course._id.toString())) {
-      courseMap.set(course._id.toString(), {
-        course: { _id: course._id.toString(), name: course.name, code: course.code },
-        conversations: [],
+  // 5. Distribuer les conversations dans les bons cours
+  for (const convo of academicConvos) {
+    const courseId = convo.courseId?.toString();
+    if (courseId && courseMap.has(courseId)) {
+      courseMap.get(courseId).conversations.push({
+        _id: convo._id.toString(),
+        title: convo.title,
+        updatedAt: convo.updatedAt?.toISOString(),
       });
     }
-    courseMap.get(course._id.toString()).conversations.push({
-      _id: convo._id.toString(),
-      title: convo.title,
-      updatedAt: convo.updatedAt?.toISOString(),
-    });
   }
   
   return {
@@ -111,4 +117,79 @@ export async function sendChatMessage(conversationId: string, content: string, r
     content: newMessage.content,
     createdAt: newMessage.createdAt.toISOString(),
   };
+}
+
+import { redirect } from 'next/navigation';
+
+export async function createConversation(userId: string, category: string, courseId?: string) {
+  await connectDB();
+  
+  const newConversation = await Conversation.create({
+    userId: new mongoose.Types.ObjectId(userId),
+    category: category as ConversationCategory,
+    courseId: courseId ? new mongoose.Types.ObjectId(courseId) : undefined,
+    title: 'New Conversation',
+  });
+
+  revalidatePath('/dashboard');
+  
+  return {
+    _id: newConversation._id.toString(),
+  };
+}
+
+
+// Also add this helper to fetch courses for the selection modal
+export async function getCourses(userId: string) {
+  await connectDB();
+  const courses = await Course.find({ userId }).lean();
+  return courses.map(c => ({ 
+    _id: c._id.toString(), 
+    name: c.name, 
+    code: c.code 
+  }));
+}
+
+export async function renameConversation(conversationId: string, newTitle: string) {
+  await connectDB();
+  await Conversation.findByIdAndUpdate(conversationId, { title: newTitle });
+  revalidatePath('/dashboard');
+}
+
+export async function createCourse(userId: string, name: string, code: string) {
+  await connectDB();
+  const newCourse = await Course.create({
+    userId: new mongoose.Types.ObjectId(userId),
+    name,
+    code,
+  });
+  revalidatePath('/dashboard');
+  return { _id: newCourse._id.toString() };
+}
+
+export async function deleteConversation(conversationId: string) {
+  await connectDB();
+  // 1. Delete all messages in the conversation
+  await Message.deleteMany({ conversationId: new mongoose.Types.ObjectId(conversationId) });
+  // 2. Delete the conversation itself
+  await Conversation.findByIdAndDelete(conversationId);
+  
+  revalidatePath('/dashboard');
+}
+
+export async function deleteCourse(courseId: string) {
+  await connectDB();
+  const convos = await Conversation.find({ courseId: new mongoose.Types.ObjectId(courseId) });
+  
+  // Delete messages for each conversation in this course
+  for (const convo of convos) {
+    await Message.deleteMany({ conversationId: convo._id });
+  }
+  
+  // Delete all conversations linked to this course
+  await Conversation.deleteMany({ courseId: new mongoose.Types.ObjectId(courseId) });
+  // Finally delete the course
+  await Course.findByIdAndDelete(courseId);
+
+  revalidatePath('/dashboard');
 }
