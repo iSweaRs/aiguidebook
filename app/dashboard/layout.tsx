@@ -3,7 +3,7 @@ import Sidebar from '../components/sidebar';
 import FeedbackModal from '../components/FeedbackModal';
 
 // In a real implementation, you would extract this from NextAuth or your Session mechanism.
-const MOCK_USER_ID = '69afee2385deb13c006b2f80'; 
+const MOCK_USER_ID = '69afef20717fb2d22f30c2de'; 
 
 export default function DashboardLayout({
   children,
