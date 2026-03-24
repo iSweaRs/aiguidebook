@@ -1,10 +1,11 @@
 module.exports = {
   mongodbMemoryServerOptions: {
     binary: {
-      version: '6.0.6', // Choose your preferred MongoDB version
+      version: '6.0.6',
       skipMD5: true,
     },
     autoStart: false,
     instance: {},
   },
+  useSharedDBForAllJestWorkers: false,
 };
